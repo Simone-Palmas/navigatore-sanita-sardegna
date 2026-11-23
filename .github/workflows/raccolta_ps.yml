@@ -26,7 +26,7 @@ jobs:
         run: python scripts/raccolta_ps.py
 
       - name: Salva i dati nel repository
-        shell: bash
+        shell: C:\Program Files\Git\bin\bash.exe {0}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898237+github-actions[bot]@users.noreply.github.com"
