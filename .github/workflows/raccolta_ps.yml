@@ -8,17 +8,16 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: raccolta-ps
+  cancel-in-progress: true
+
 jobs:
   raccolta:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Scarica il repository
         uses: actions/checkout@v4
-
-      - name: Installa Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
 
       - name: Installa le librerie
         run: pip install -r requirements.txt
@@ -27,6 +26,7 @@ jobs:
         run: python scripts/raccolta_ps.py
 
       - name: Salva i dati nel repository
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898237+github-actions[bot]@users.noreply.github.com"
