@@ -51,8 +51,28 @@ COLONNE = ["data_ora_raccolta", "ultimo_aggiornamento_sito",
 ORA_ITALIA = ZoneInfo("Europe/Rome")
 
 
+def mostra_risposta(etichetta, risposta):
+    """Stampa le informazioni utili a capire come ha risposto il sito."""
+    print(f"--- {etichetta}: codice {risposta.status_code}")
+    if risposta.status_code != 200:
+        motivo = risposta.headers.get("WWW-Authenticate", "nessuno")
+        testo = " ".join(risposta.text.split())[:400]
+        print(f"    Intestazione WWW-Authenticate: {motivo}")
+        print(f"    Testo della risposta: {testo}")
+
+
 def leggi_azienda(sessione, codice_azienda):
     """Scarica i dati di un'azienda sanitaria e restituisce una riga per pronto soccorso."""
+    # 1) "Clic" sul menu dell'azienda, come nel browser
+    menu = sessione.post(
+        URL,
+        data={"page": "carLavoroAsl", "user_id": "public",
+              "codiceAziendaSanitaria": codice_azienda},
+        timeout=30,
+    )
+    mostra_risposta(f"Menu {AZIENDE[codice_azienda]}", menu)
+
+    # 2) Richiesta dei dati aggiornati
     risposta = sessione.get(
         URL,
         params={
@@ -60,8 +80,11 @@ def leggi_azienda(sessione, codice_azienda):
             "tipoProntoSoccorso": "GENERALE",
             "xhr": "true",
         },
+        headers={"X-Requested-With": "XMLHttpRequest",
+                 "Accept": "application/json, text/javascript, */*; q=0.01"},
         timeout=30,
     )
+    mostra_risposta(f"Dati {AZIENDE[codice_azienda]}", risposta)
     risposta.raise_for_status()
     dati = json.loads(risposta.text)
 
@@ -98,43 +121,4 @@ def main():
     sessione = requests.Session()
     # Intestazioni come quelle di un normale browser
     sessione.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                      "(KHTML, like Gecko) Chrome/131.0 Safari/537.36",
-        "Accept": "application/json, text/javascript, */*; q=0.01",
-        "Accept-Language": "it-IT,it;q=0.9",
-        "Referer": URL,
-        "X-Requested-With": "XMLHttpRequest",
-    })
-
-    # Prima visita alla pagina principale, come farebbe un browser
-    sessione.get(URL, timeout=30)
-
-    tutte_le_righe = []
-    for codice in AZIENDE:
-        try:
-            righe = leggi_azienda(sessione, codice)
-            print(f"{AZIENDE[codice]}: {len(righe)} pronto soccorso")
-            tutte_le_righe.extend(righe)
-        except Exception as errore:
-            print(f"ERRORE {AZIENDE[codice]}: {errore}")
-        time.sleep(2)  # pausa di cortesia tra una richiesta e l'altra
-
-    if not tutte_le_righe:
-        raise SystemExit("Nessun dato raccolto: controllare il sito o lo script.")
-
-    os.makedirs("data", exist_ok=True)
-    mese = datetime.now(ORA_ITALIA).strftime("%Y-%m")
-    percorso = f"data/ps_{mese}.csv"
-    file_nuovo = not os.path.exists(percorso)
-
-    with open(percorso, "a", newline="", encoding="utf-8") as f:
-        scrittore = csv.DictWriter(f, fieldnames=COLONNE)
-        if file_nuovo:
-            scrittore.writeheader()
-        scrittore.writerows(tutte_le_righe)
-
-    print(f"Salvate {len(tutte_le_righe)} righe in {percorso}")
-
-
-if __name__ == "__main__":
-    main()
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0;
