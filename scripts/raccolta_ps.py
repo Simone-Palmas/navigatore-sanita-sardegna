@@ -96,7 +96,15 @@ def leggi_azienda(sessione, codice_azienda):
 
 def main():
     sessione = requests.Session()
-    sessione.headers["User-Agent"] = "Progetto demo portfolio (non commerciale) - raccolta dati PS Sardegna"
+    # Intestazioni come quelle di un normale browser
+    sessione.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                      "(KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Language": "it-IT,it;q=0.9",
+        "Referer": URL,
+        "X-Requested-With": "XMLHttpRequest",
+    })
 
     # Prima visita alla pagina principale, come farebbe un browser
     sessione.get(URL, timeout=30)
