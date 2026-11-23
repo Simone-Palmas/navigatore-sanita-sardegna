@@ -121,4 +121,44 @@ def main():
     sessione = requests.Session()
     # Intestazioni come quelle di un normale browser
     sessione.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0;
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                      "(KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+        "Accept-Language": "it-IT,it;q=0.9",
+        "Referer": URL,
+        "Origin": "https://monitorps.sardegnasalute.it",
+    })
+
+    # Apertura della pagina principale come utente "public", come fa il browser
+    home = sessione.post(URL, data={"page": "carLavoroMain", "user_id": "public"}, timeout=30)
+    mostra_risposta("Pagina principale", home)
+    print(f"    Cookie ricevuti: {list(sessione.cookies.keys())}")
+
+    tutte_le_righe = []
+    for codice in AZIENDE:
+        try:
+            righe = leggi_azienda(sessione, codice)
+            print(f"OK {AZIENDE[codice]}: {len(righe)} pronto soccorso")
+            tutte_le_righe.extend(righe)
+        except Exception as errore:
+            print(f"ERRORE {AZIENDE[codice]}: {errore}")
+        time.sleep(2)  # pausa di cortesia tra una richiesta e l'altra
+
+    if not tutte_le_righe:
+        raise SystemExit("Nessun dato raccolto: controllare il sito o lo script.")
+
+    os.makedirs("data", exist_ok=True)
+    mese = datetime.now(ORA_ITALIA).strftime("%Y-%m")
+    percorso = f"data/ps_{mese}.csv"
+    file_nuovo = not os.path.exists(percorso)
+
+    with open(percorso, "a", newline="", encoding="utf-8") as f:
+        scrittore = csv.DictWriter(f, fieldnames=COLONNE)
+        if file_nuovo:
+            scrittore.writeheader()
+        scrittore.writerows(tutte_le_righe)
+
+    print(f"Salvate {len(tutte_le_righe)} righe in {percorso}")
+
+
+if __name__ == "__main__":
+    main()
